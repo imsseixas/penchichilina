@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pechinchilina</title>
+  <meta name="description" content="Compare preços e promoções de remédios em várias farmácias online.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="logo" href="/" aria-label="Pechinchilina — início">
+        <img src="favicon.svg" alt="" width="32" height="32">
+        <span>Pechinchilina</span>
+      </a>
+      <p class="tagline">O menor preço do seu remédio em <strong id="store-count">várias</strong> farmácias</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <form id="search-form" class="search" role="search" autocomplete="off">
+      <label for="q" class="sr-only">Nome do remédio</label>
+      <input id="q" name="q" type="search" list="suggestions" placeholder="Ex.: losartana 50mg, dorflex, rivotril 2mg…" minlength="2" maxlength="100" required autofocus>
+      <datalist id="suggestions"></datalist>
+      <label for="cep" class="sr-only">CEP para entrega</label>
+      <input id="cep" name="cep" class="cep" type="text" inputmode="numeric" placeholder="Seu CEP" maxlength="9" title="Informe o CEP para ver quem entrega, o frete e o prazo">
+      <button type="submit" class="btn-primary">Buscar</button>
+    </form>
+    <div id="recent" class="recent" hidden></div>
+
+    <section id="status" class="status" aria-live="polite" hidden></section>
+
+    <div id="empty-state" class="empty-state">
+      <h2>Como funciona</h2>
+      <ol>
+        <li>Digite o nome do remédio (de preferência com a dosagem, ex.: <em>losartana 50mg</em>).</li>
+        <li>Consultamos as farmácias em paralelo e os resultados aparecem conforme cada uma responde.</li>
+        <li>O mesmo produto (mesmo código de barras) é agrupado, então você compara preço por preço entre lojas.</li>
+        <li>Promoções do tipo <em>leve 3 pague 2</em> e <em>% off na 2ª unidade</em> são convertidas em preço por unidade.</li>
+      </ol>
+      <p class="muted">Preços sem frete. Confira sempre na loja antes de comprar — e siga a orientação do seu médico ou farmacêutico.</p>
+    </div>
+
+    <div id="results-area" class="results-area" hidden>
+      <aside class="filters" aria-label="Filtros">
+        <details id="filters-details" open>
+          <summary>Filtros e ordenação</summary>
+
+          <label class="field">
+            <span>Ordenar por</span>
+            <select id="sort">
+              <option value="unit">Menor preço por unidade</option>
+              <option value="price">Menor preço</option>
+              <option value="savings">Maior diferença entre farmácias</option>
+              <option value="discount">Maior desconto</option>
+              <option value="stores">Disponível em mais farmácias</option>
+            </select>
+          </label>
+
+          <fieldset class="field" id="ship-filters" hidden>
+            <legend>Entrega no CEP <span id="cep-label"></span></legend>
+            <select id="ship-mode" aria-label="Como receber">
+              <option value="delivery">Receber em casa</option>
+              <option value="any">Em casa ou retirar na loja</option>
+            </select>
+            <label class="check">
+              <input type="checkbox" id="hide-undeliverable" checked>
+              <span>Esconder quem não atende meu CEP</span>
+            </label>
+            <p class="hint">Com CEP, o ranking compara <strong>preço + frete</strong> (frete de 1 unidade).</p>
+          </fieldset>
+
+          <label class="check">
+            <input type="checkbox" id="use-promos" checked>
+            <span>Considerar promoções "leve X" no preço</span>
+          </label>
+
+          <fieldset class="field">
+            <legend>Tipo</legend>
+            <div id="type-chips" class="chips"></div>
+          </fieldset>
+
+          <label class="field">
+            <span>Dosagem</span>
+            <select id="dosage"><option value="">Todas</option></select>
+          </label>
+
+          <label class="field">
+            <span>Embalagem</span>
+            <select id="package"><option value="">Todas</option></select>
+          </label>
+
+          <label class="check">
+            <input type="checkbox" id="promo-only">
+            <span>Só produtos em promoção</span>
+          </label>
+
+          <label class="check">
+            <input type="checkbox" id="multi-store">
+            <span>Só produtos em 2+ farmácias</span>
+          </label>
+
+          <label class="check">
+            <input type="checkbox" id="show-loose">
+            <span>Incluir resultados menos exatos</span>
+          </label>
+
+          <fieldset class="field">
+            <legend>Farmácias</legend>
+            <div id="store-filter" class="store-filter"></div>
+          </fieldset>
+        </details>
+      </aside>
+
+      <section class="results">
+        <div id="highlights" class="highlights"></div>
+        <p id="summary" class="summary"></p>
+        <div id="groups"></div>
+        <button id="more" class="btn-secondary more" hidden>Mostrar mais produtos</button>
+      </section>
+    </div>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Pechinchilina consulta as APIs públicas das lojas em tempo real. Preços e estoque podem mudar; frete não incluso.</p>
+  </footer>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
