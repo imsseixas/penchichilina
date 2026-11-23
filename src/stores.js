@@ -13,7 +13,6 @@ export const STORES = [
   { id: 'precopopular', name: 'Preço Popular', base: 'https://www.precopopular.com.br', color: '#ffcc00' },
   { id: 'rosario', name: 'Drogaria Rosário', base: 'https://www.drogariarosario.com.br', color: '#c8102e' },
   { id: 'catarinense', name: 'Drogaria Catarinense', base: 'https://www.drogariacatarinense.com.br', color: '#008c45' },
-  { id: 'consultaremedios', name: 'Consulta Remédios', base: 'https://consultaremedios.com.br', color: '#00a0df' },
 ];
 
 export const STORE_BY_ID = Object.fromEntries(STORES.map((s) => [s.id, s]));

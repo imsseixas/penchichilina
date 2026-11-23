@@ -42,7 +42,9 @@ test('retirada na loja', () => {
   });
   assert.equal(r.ok, true);
   assert.equal(r.delivery, null);
-  assert.deepEqual(r.pickup, { count: 2, estimate: '60m', nearest: 'Loja B', distanceKm: 1 });
+  const { points, ...summary } = r.pickup;
+  assert.deepEqual(summary, { count: 2, estimate: '60m', nearest: 'Loja B', distanceKm: 1 });
+  assert.deepEqual(points.map((p) => p.name), ['Loja B', 'Loja A']);
 });
 
 test('não entrega no CEP', () => {

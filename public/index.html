@@ -7,6 +7,7 @@
   <meta name="description" content="Compare preços e promoções de remédios em várias farmácias online.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="features.css">
 </head>
 <body>
   <header class="top">
@@ -15,10 +16,18 @@
         <img src="favicon.svg" alt="" width="32" height="32">
         <span>Pechinchilina</span>
       </a>
-      <p class="tagline">O menor preço do seu remédio em <strong id="store-count">várias</strong> farmácias</p>
+      <nav class="nav" aria-label="Seções">
+        <a href="/" data-view="deals" aria-current="true">🔥 Superofertas</a>
+        <a href="#busca" data-view="search" aria-current="false">Buscar</a>
+      </nav>
+      <div class="top-actions">
+        <button type="button" class="icon-btn" data-open="watch" title="Monitorados e alertas">🔔<span class="badge alert-badge" hidden></span></button>
+        <button type="button" class="icon-btn" data-open="cart" title="Carrinho">🛒<span class="badge cart-badge" hidden></span></button>
+      </div>
     </div>
   </header>
 
+  <div class="page">
   <main class="wrap">
     <form id="search-form" class="search" role="search" autocomplete="off">
       <label for="q" class="sr-only">Nome do remédio</label>
@@ -26,21 +35,27 @@
       <datalist id="suggestions"></datalist>
       <label for="cep" class="sr-only">CEP para entrega</label>
       <input id="cep" name="cep" class="cep" type="text" inputmode="numeric" placeholder="Seu CEP" maxlength="9" title="Informe o CEP para ver quem entrega, o frete e o prazo">
+      <button type="button" id="near-btn" class="near-btn" aria-pressed="false" title="Buscar só nas farmácias com loja física perto de você (usa sua localização)">📍 <span>Perto de mim</span></button>
       <button type="submit" class="btn-primary">Buscar</button>
     </form>
+
+    <section id="view-search" hidden>
     <div id="recent" class="recent" hidden></div>
+
+    <div id="near-info" class="near-info" aria-live="polite" hidden></div>
 
     <section id="status" class="status" aria-live="polite" hidden></section>
 
     <div id="empty-state" class="empty-state">
       <h2>Como funciona</h2>
       <ol>
-        <li>Digite o nome do remédio (de preferência com a dosagem, ex.: <em>losartana 50mg</em>).</li>
-        <li>Consultamos as farmácias em paralelo e os resultados aparecem conforme cada uma responde.</li>
-        <li>O mesmo produto (mesmo código de barras) é agrupado, então você compara preço por preço entre lojas.</li>
-        <li>Promoções do tipo <em>leve 3 pague 2</em> e <em>% off na 2ª unidade</em> são convertidas em preço por unidade.</li>
+        <li>Digite o nome do remédio (de preferência com a dosagem, ex.: <em>losartana 50mg</em>) e seu CEP.</li>
+        <li>Consultamos as farmácias em paralelo e verificamos quem entrega no seu endereço, com frete e prazo.</li>
+        <li>O mesmo produto (mesmo código de barras) é agrupado, então você compara preço + frete entre lojas.</li>
+        <li>Adicione ao <b>🛒 carrinho</b> para descobrir onde comprar tudo junto, ou <b>🔔 monitore</b> para ser avisado quando baixar.</li>
       </ol>
-      <p class="muted">Preços sem frete. Confira sempre na loja antes de comprar — e siga a orientação do seu médico ou farmacêutico.</p>
+      <p>Procurando pechincha sem saber o quê? Veja as <a href="/" data-view="deals">🔥 Superofertas</a>.</p>
+      <p class="muted">Confira sempre na loja antes de comprar — e siga a orientação do seu médico ou farmacêutico.</p>
     </div>
 
     <div id="results-area" class="results-area" hidden>
@@ -56,20 +71,32 @@
               <option value="savings">Maior diferença entre farmácias</option>
               <option value="discount">Maior desconto</option>
               <option value="stores">Disponível em mais farmácias</option>
+              <option value="distance" id="sort-distance" hidden>Loja mais perto</option>
             </select>
           </label>
 
           <fieldset class="field" id="ship-filters" hidden>
-            <legend>Entrega no CEP <span id="cep-label"></span></legend>
+            <legend id="ship-legend">Entrega no CEP</legend>
             <select id="ship-mode" aria-label="Como receber">
               <option value="delivery">Receber em casa</option>
               <option value="any">Em casa ou retirar na loja</option>
+              <option value="store">Ir à farmácia perto de mim</option>
             </select>
+            <label class="field" id="radius-field" hidden>
+              <span>Loja a até</span>
+              <select id="radius">
+                <option value="1">1 km</option>
+                <option value="2">2 km</option>
+                <option value="3" selected>3 km</option>
+                <option value="5">5 km</option>
+                <option value="10">10 km</option>
+              </select>
+            </label>
             <label class="check">
               <input type="checkbox" id="hide-undeliverable" checked>
-              <span>Esconder quem não atende meu CEP</span>
+              <span id="hide-undeliverable-label">Esconder quem não atende meu CEP</span>
             </label>
-            <p class="hint">Com CEP, o ranking compara <strong>preço + frete</strong> (frete de 1 unidade).</p>
+            <p class="hint" id="ship-hint">Com CEP, o ranking compara <strong>preço + frete</strong> (frete de 1 unidade).</p>
           </fieldset>
 
           <label class="check">
@@ -80,6 +107,11 @@
           <fieldset class="field">
             <legend>Tipo</legend>
             <div id="type-chips" class="chips"></div>
+          </fieldset>
+
+          <fieldset class="field" id="maker-field" hidden>
+            <legend>Fabricante</legend>
+            <div id="maker-filter" class="store-filter maker-filter"></div>
           </fieldset>
 
           <label class="field">
@@ -121,11 +153,64 @@
         <button id="more" class="btn-secondary more" hidden>Mostrar mais produtos</button>
       </section>
     </div>
+    </section>
+
+    <section id="view-deals">
+      <div class="deals-head">
+        <div>
+          <h1>🔥 Superofertas</h1>
+          <p class="muted">Produtos com preço bem abaixo do que as outras farmácias cobram pelo <b>mesmo item</b>. <span id="deals-status"></span></p>
+        </div>
+        <div class="deals-controls">
+          <select id="deals-sort" aria-label="Ordenar ofertas">
+            <option value="score">Melhores ofertas</option>
+            <option value="discount">Maior desconto</option>
+            <option value="price">Menor preço</option>
+          </select>
+          <label class="check"><input type="checkbox" id="deals-real"><span>Só comparadas entre farmácias</span></label>
+        </div>
+      </div>
+      <div id="deal-cats" class="chips deal-cats"></div>
+      <p id="deals-cep" class="hint"></p>
+      <div id="deals-grid" class="deals-grid"></div>
+      <button id="deals-more" class="btn-secondary more" hidden>Mostrar mais ofertas</button>
+    </section>
   </main>
 
   <footer class="wrap foot">
-    <p>Pechinchilina consulta as APIs públicas das lojas em tempo real. Preços e estoque podem mudar; frete não incluso.</p>
+    <p>Pechinchilina consulta as APIs públicas das lojas em tempo real. Preços, estoque e frete podem mudar; confira na loja.</p>
   </footer>
+  </div>
+
+  <aside id="side-panel" class="side-panel" aria-label="Carrinho e monitorados" aria-hidden="true">
+    <div class="sp-head" role="tablist">
+      <button type="button" role="tab" data-tab="cart" aria-selected="true">🛒 Carrinho <span class="badge cart-badge" hidden></span></button>
+      <button type="button" role="tab" data-tab="watch" aria-selected="false">🔔 Monitorados <span class="badge alert-badge" hidden></span></button>
+      <button type="button" class="sp-close" aria-label="Fechar painel">×</button>
+    </div>
+    <div id="tab-cart" class="sp-body" role="tabpanel"></div>
+    <div id="tab-watch" class="sp-body" role="tabpanel" hidden></div>
+  </aside>
+
+  <dialog id="watch-dialog" aria-labelledby="wd-title">
+    <form id="watch-form" method="dialog">
+      <h2 id="wd-title">🔔 Monitorar preço</h2>
+      <p id="wd-name" class="wd-name"></p>
+      <p id="wd-now" class="muted"></p>
+      <label class="field">
+        <span>Me avise quando chegar a (opcional)</span>
+        <input id="wd-target" type="text" inputmode="decimal" autocomplete="off">
+      </label>
+      <p id="wd-cep" class="hint"></p>
+      <p class="hint">Mesmo sem alvo, avisamos quando bater o menor preço já visto ou cair 10% ou mais.</p>
+      <div class="wd-actions">
+        <button type="button" class="btn-secondary" id="wd-cancel">Cancelar</button>
+        <button type="submit" class="btn-primary">Monitorar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
 
   <script src="app.js" type="module"></script>
 </body>

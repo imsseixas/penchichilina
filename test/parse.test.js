@@ -49,3 +49,35 @@ test('promoções', () => {
   assert.equal(p('PAGUE R$ 12,00 CADA', 2, {}, 10).unitPrice, null);
   assert.equal(p('Frete grátis', 1).unitPrice, null);
 });
+
+test('fabricante: grafias diferentes viram a mesma chave', async () => {
+  const { normalizeMaker, pickMaker } = await import('../src/parse.js');
+  const key = (s) => normalizeMaker(s)?.key;
+  assert.equal(key('Neo Quimica'), key('NEO QUÍMICA'));
+  assert.equal(key('Prati'), key('Prati-Donaduzzi'));
+  assert.equal(key('Biosintetica - Genérico'), key('Biosintética Genérica'));
+  assert.equal(key('Merck Sharp & Dohme (MSD)'), key('Msd'));
+  assert.equal(key('EMS S/A'), key('Ems'));
+  assert.deepEqual(normalizeMaker('RANBAXY - GENERICO'), { key: 'ranbaxy', name: 'Ranbaxy' });
+  assert.deepEqual(normalizeMaker('Laboratório Teuto Brasileiro'), { key: 'teuto', name: 'Teuto' });
+  assert.equal(normalizeMaker('Hipolabor Farmacêutica Ltda').name, 'Hipolabor');
+  assert.equal(normalizeMaker('Medicamento Genérico conforme Lei N.o 9.787/99'), null);
+  assert.equal(normalizeMaker(''), null);
+  assert.equal(normalizeMaker('Não especificado'), null);
+  assert.equal(key('Hypera Pharma'), 'hypera');
+  assert.equal(key('Ache Farmaceutico'), 'ache');
+  assert.equal(key('Takeda Otc'), 'takeda');
+  assert.equal(key('Cimed Industria De Medicamento'), 'cimed');
+  assert.equal(key('Superbom'), 'superbom'); // não é "Supera"
+  assert.equal(pickMaker(['Sanofi'], 'Novalgina', 'Novalgina 1g').sure, true);
+  // a propriedade "Fabricante" vale mais que a marca
+  assert.equal(pickMaker(['Biolab'], 'Aradois', 'Aradois 50mg').key, 'biolab');
+  // marca que é o nome do próprio produto não é fabricante
+  assert.equal(pickMaker([], 'Aradois', 'Aradois 50mg 30 Comprimidos'), null);
+  assert.equal(pickMaker([], 'Losartana', 'Losartana Potássica 50mg'), null);
+  assert.equal(pickMaker([], 'EMS', 'Losartana Potássica 50mg EMS').key, 'ems');
+  assert.equal(pickMaker([], 'Novalgina', 'Analgésico e Antitérmico Novalgina 1g Dipirona 10 Comprimidos'), null);
+  assert.equal(pickMaker([], 'Natulab', 'Maxalgina Dipirona 500mg 30 Comprimidos Natulab').key, 'natulab');
+  // fabricante conhecido no início do nome continua valendo
+  assert.equal(pickMaker([], 'Medley', 'Medley Losartana').key, 'medley');
+});

@@ -1,7 +1,7 @@
 // Cliente da API pública de catálogo VTEX. Tenta primeiro a busca
 // "inteligente" (melhor relevância) e cai para a busca clássica se a loja
 // não a suportar ou não retornar nada.
-import { detectType, matchesQuery, parseDosage, parsePromo, parseQuantity, queryTokens } from './parse.js';
+import { detectType, matchesQuery, parseDosage, parsePromo, parseQuantity, pickMaker, queryTokens } from './parse.js';
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
@@ -22,20 +22,31 @@ async function getJson(url) {
   }
 }
 
-async function intelligentSearch(store, query) {
+async function intelligentSearch(store, query, sort) {
   const url =
     `${store.base}/api/io/_v/api/intelligent-search/product_search/?query=${encodeURIComponent(query)}` +
-    `&count=${PAGE_SIZE}&page=1&locale=pt-BR&hideUnavailableItems=true`;
+    `&count=${PAGE_SIZE}&page=1&locale=pt-BR&hideUnavailableItems=true` +
+    (sort === 'discount' ? '&sort=discount:desc' : '');
   const data = await getJson(url);
   return Array.isArray(data?.products) ? data.products : [];
 }
 
-async function legacySearch(store, query) {
+async function legacySearch(store, query, sort) {
   const url =
     `${store.base}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(query)}` +
-    `&_from=0&_to=${PAGE_SIZE - 1}`;
+    `&_from=0&_to=${PAGE_SIZE - 1}` +
+    (sort === 'discount' ? '&O=OrderByBestDiscountDESC' : '');
   const data = await getJson(url);
   return Array.isArray(data) ? data : [];
+}
+
+// Procura um produto exato pelo código de barras. Retorna a oferta ou null.
+export async function lookupByEan(store, ean) {
+  const url = `${store.base}/api/catalog_system/pub/products/search?fq=alternateIds_Ean:${encodeURIComponent(ean)}`;
+  const data = await getJson(url);
+  const products = Array.isArray(data) ? data : [];
+  const offers = products.flatMap((p) => productToOffers(store, p, []));
+  return offers.find((o) => o.ean === String(ean).replace(/^0+/, '')) || null;
 }
 
 // Lê uma chave em qualquer capitalização / formato de backing field do .NET
@@ -112,6 +123,7 @@ const round2 = (v) => Math.round(v * 100) / 100;
 export function productToOffers(store, product, tokens) {
   const activeIngredient = readProps(product, /princ[ií]pio ativo/i);
   const typeProps = readProps(product, /tipo (de|do) (medicamento|produto)|categoria do medicamento/i);
+  const maker = pickMaker(readProps(product, /^(fabricante|laborat[oó]rio)$/i), product.brand, product.productName);
   const haystack = [product.productName, product.brand, ...activeIngredient].join(' ');
   const relevant = matchesQuery(tokens, haystack);
 
@@ -148,6 +160,9 @@ export function productToOffers(store, product, tokens) {
       skuId: item.itemId,
       name,
       brand: product.brand || null,
+      maker: maker?.name || null,
+      makerKey: maker?.key || null,
+      makerSure: Boolean(maker?.sure),
       ean: item.ean ? String(item.ean).replace(/^0+/, '') : null,
       url: absoluteUrl(store, product),
       image: item.images?.[0]?.imageUrl || null,
@@ -171,18 +186,18 @@ export function productToOffers(store, product, tokens) {
   return offers;
 }
 
-export async function searchStore(store, query) {
+export async function searchStore(store, query, { sort } = {}) {
   const tokens = queryTokens(query);
   let products = [];
   let mode = 'intelligent';
   try {
-    products = await intelligentSearch(store, query);
+    products = await intelligentSearch(store, query, sort);
   } catch {
     products = [];
   }
   if (!products.length) {
     mode = 'legacy';
-    products = await legacySearch(store, query);
+    products = await legacySearch(store, query, sort);
   }
   const offers = products.flatMap((p) => productToOffers(store, p, tokens));
   return { mode, offers };

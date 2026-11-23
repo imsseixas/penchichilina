@@ -138,3 +138,96 @@ export function parsePromo(teaser, price) {
     unitPrice: unitPrice != null ? Math.round(unitPrice * 100) / 100 : null,
   };
 }
+
+// ---------- fabricante ----------
+// Cada farmácia escreve o laboratório de um jeito ("Neo Química", "NEO QUIMICA",
+// "Prati", "Prati-Donaduzzi", "RANBAXY - GENERICO"). Aqui viram uma chave única
+// e um nome bonito para exibir.
+const MAKER_NAMES = {
+  abbott: 'Abbott', accord: 'Accord', ache: 'Aché', airela: 'Airela', apsen: 'Apsen', astrazeneca: 'AstraZeneca',
+  bayer: 'Bayer', belfar: 'Belfar', biolab: 'Biolab', biosintetica: 'Biosintética', boehringer: 'Boehringer Ingelheim',
+  brainfarma: 'Brainfarma', cifarma: 'Cifarma', cimed: 'Cimed', cristalia: 'Cristália', daiichi: 'Daiichi Sankyo',
+  ems: 'EMS', eurofarma: 'Eurofarma', farmoquimica: 'FQM', geolab: 'Geolab', germed: 'Germed', globo: 'Globo',
+  gsk: 'GSK', hypera: 'Hypera', janssen: 'Janssen', legrand: 'Legrand', libbs: 'Libbs', lilly: 'Lilly',
+  mantecorp: 'Mantecorp', medley: 'Medley', medquimica: 'Medquímica', merck: 'Merck', msd: 'MSD',
+  multilab: 'Multilab', natcofarma: 'Natcofarma', neoquimica: 'Neo Química', novanordisk: 'Novo Nordisk',
+  novaquimica: 'Nova Química', novartis: 'Novartis', organon: 'Organon', pfizer: 'Pfizer',
+  prati: 'Prati-Donaduzzi', ranbaxy: 'Ranbaxy', roche: 'Roche', sandoz: 'Sandoz', sanofi: 'Sanofi',
+  servier: 'Servier', sigmapharma: 'EMS Sigma Pharma', sunfarma: 'Sun Farma', supera: 'Supera', takeda: 'Takeda',
+  teuto: 'Teuto', torrent: 'Torrent', uniaoquimica: 'União Química', vitamedic: 'Vitamedic', zydus: 'Zydus',
+};
+// apelidos (já normalizados, sem espaços) -> chave
+const MAKER_ALIASES = {
+  pratidonaduzzi: 'prati', emssa: 'ems', emssigmapharma: 'sigmapharma', achebiosintetica: 'biosintetica',
+  mercksharpdohme: 'msd', merchsharpdohme: 'msd', biolabsanus: 'biolab', boehringeringelheim: 'boehringer',
+  daiichisankyo: 'daiichi', fqm: 'farmoquimica', elililly: 'lilly', novonordisk: 'novanordisk',
+  superafarma: 'supera', sunpharma: 'sunfarma', glaxosmithkline: 'gsk', sanofiaventis: 'sanofi',
+  medleygenericos: 'medley', torrentpharma: 'torrent', zydusnikkho: 'zydus', geolabindustria: 'geolab',
+  sanofimedley: 'medley',
+};
+// chaves conhecidas com 4+ letras, das mais longas para as mais curtas
+const KNOWN_PREFIXES = Object.keys(MAKER_NAMES)
+  .filter((k) => k.length >= 4)
+  .sort((a, b) => b.length - a.length);
+const MAKER_TAIL = /^(pharma|farma|otc|mip|otx|farmaceuticos?|industria\w*|labor|farmasa|saude|consumer|healthcare)$/;
+const MAKER_SUFFIXES =
+  /\b(genericos?|generica|medicamentos?|industrias? farmaceuticas?|ind farm|laboratorios?|lab|ltda|s a|sa|do brasil|brasileiro|brasil|farmaceutica)\b/g;
+
+function makerKey(raw) {
+  return normalize(raw)
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(MAKER_SUFFIXES, ' ')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+const titleCase = (s) => s.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
+// raw: texto da loja. Retorna { key, name } ou null se não parecer um fabricante.
+// `sure` diz se veio da propriedade "Fabricante" da loja (mais confiável que a marca).
+export function normalizeMaker(raw) {
+  let text = String(raw || '').trim();
+  if (!text || text.length > 60 || /conforme|\blei\b|\d{3}/i.test(text)) return null;
+  // "Merck Sharp & Dohme (MSD)": o que está entre parênteses costuma ser a sigla conhecida
+  const paren = text.match(/\(([^)]+)\)/);
+  if (paren) {
+    const k = makerKey(paren[1]);
+    if (MAKER_NAMES[k] || MAKER_ALIASES[k]) text = paren[1];
+    else text = text.replace(/\([^)]*\)/g, ' ');
+  }
+  text = text.replace(/\s+-\s+.*$/, '').trim(); // "RANBAXY - GENERICO"
+  let key = makerKey(text);
+  key = MAKER_ALIASES[key] || key;
+  if (!key || key.length < 2 || /^(generico|nao|naoinformado|naoespecificado|outros|diversos|semmarca)$/.test(key)) return null;
+  if (MAKER_NAMES[key]) return { key, name: MAKER_NAMES[key] };
+  // "Hypera Pharma", "Aché Farmacêutico", "Takeda OTC", "Cimed Indústria de Medicamento"
+  const known = KNOWN_PREFIXES.find((k) => key.startsWith(k) && MAKER_TAIL.test(key.slice(k.length)));
+  if (known) return { key: known, name: MAKER_NAMES[known] };
+  const clean =
+    text
+      .replace(/\b(ltda|s\.?\/?a\.?|ind[uú]strias? farmac[eê]uticas?|farmac[eê]utica|laborat[oó]rios?)(?=\s|$|\.)/gi, ' ')
+      .replace(/[\s,.-]+$/, '')
+      .replace(/\s+/g, ' ')
+      .trim() || text;
+  return { key, name: clean === clean.toUpperCase() && clean.length > 4 ? titleCase(clean) : clean };
+}
+
+// Fabricante de um produto: a propriedade "Fabricante"/"Laboratório" quando a loja
+// informa; senão a marca, desde que não seja o nome comercial do próprio produto
+// (algumas farmácias põem "Aradois" ou "Losartana" no campo marca).
+export function pickMaker(props, brand, productName) {
+  for (const v of props) {
+    const m = normalizeMaker(v);
+    if (m) return { ...m, sure: true };
+  }
+  const m = normalizeMaker(brand);
+  if (!m || MAKER_NAMES[m.key]) return m;
+  // O fabricante costuma vir no fim ("Losartana 50mg 30 Comprimidos Natulab");
+  // a marca comercial vem antes da dosagem ("Analgésico Novalgina 1g").
+  const name = normalize(productName);
+  const b = normalize(brand);
+  const at = b ? name.search(new RegExp(`(^| )${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`)) : -1;
+  const firstDigit = name.search(/\d/);
+  if (at === 0 || (at > 0 && (firstDigit === -1 || at < firstDigit))) return null;
+  return m;
+}

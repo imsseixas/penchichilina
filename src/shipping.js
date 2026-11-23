@@ -16,6 +16,17 @@ export function cleanCep(value) {
   return /^\d{8}$/.test(digits) ? digits : null;
 }
 
+// "Pague Menos - Salvador Shopping, (Loja 995). " -> "Pague Menos - Salvador Shopping, (Loja 995)"
+export function cleanName(name) {
+  return String(name || '').replace(/[\s.\-–]+$/, '').replace(/\s+/g, ' ').trim();
+}
+
+export function formatAddress(a) {
+  if (!a) return '';
+  const street = [String(a.street || '').trim(), String(a.number || '').trim()].filter(Boolean).join(', ');
+  return [street, String(a.neighborhood || '').trim()].filter(Boolean).join(' - ');
+}
+
 // "3bd" -> 3 dias úteis, "60m" -> 60 minutos, "2h", "30d" -> minutos aproximados
 export function estimateToMinutes(est) {
   const m = String(est || '').match(/^(\d+)(bd|d|h|m)$/);
@@ -43,17 +54,29 @@ export function summarizeSimulation(data) {
 
   let pickupInfo = null;
   if (pickup.length) {
-    const nearest = pickup.reduce((a, b) =>
-      (b.pickupDistance ?? Infinity) < (a.pickupDistance ?? Infinity) ? b : a,
-    );
+    const byDistance = pickup.slice().sort((a, b) => (a.pickupDistance ?? Infinity) - (b.pickupDistance ?? Infinity));
+    const nearest = byDistance[0];
     const quickest = pickup.reduce((a, b) =>
       estimateToMinutes(b.shippingEstimate) < estimateToMinutes(a.shippingEstimate) ? b : a,
     );
     pickupInfo = {
       count: pickup.length,
       estimate: quickest.shippingEstimate,
-      nearest: nearest.pickupStoreInfo?.friendlyName || null,
+      nearest: cleanName(nearest.pickupStoreInfo?.friendlyName) || null,
       distanceKm: nearest.pickupDistance != null ? Math.round(nearest.pickupDistance * 10) / 10 : null,
+      // lojas físicas que têm o produto para retirar, da mais perto para a mais longe
+      points: byDistance.slice(0, 5).map((s) => {
+        const [lng, lat] = s.pickupStoreInfo?.address?.geoCoordinates || [];
+        return {
+          id: s.pickupPointId || null,
+          name: cleanName(s.pickupStoreInfo?.friendlyName),
+          address: formatAddress(s.pickupStoreInfo?.address),
+          distanceKm: s.pickupDistance != null ? Math.round(s.pickupDistance * 100) / 100 : null,
+          estimate: s.shippingEstimate,
+          lat: Number.isFinite(lat) ? lat : null,
+          lng: Number.isFinite(lng) ? lng : null,
+        };
+      }),
     };
   }
 
@@ -69,16 +92,31 @@ export function summarizeSimulation(data) {
   };
 }
 
-async function simulateOne(store, skuId, seller, cep) {
-  const key = `${store.id}|${skuId}|${seller}|${cep}`;
+// A loja limita requisições (HTTP 429): espera e tenta de novo algumas vezes.
+const RETRY_DELAYS_MS = [800, 2000, 4500];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+export async function fetchWithRetry(url, init) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if ((res.status !== 429 && res.status !== 503) || attempt >= RETRY_DELAYS_MS.length) return res;
+    const after = Number(res.headers.get('retry-after'));
+    await sleep(Number.isFinite(after) && after > 0 ? Math.min(after * 1000, 8000) : RETRY_DELAYS_MS[attempt] * (1 + Math.random() * 0.3));
+  }
+}
+
+// geo (opcional): { lat, lng }. A VTEX exige o CEP, mas com coordenadas as
+// distâncias das lojas para retirada passam a ser medidas a partir delas.
+export async function simulateOne(store, skuId, seller, cep, geo = null) {
+  const key = `${store.id}|${skuId}|${seller}|${cep}|${geo ? `${geo.lat},${geo.lng}` : ''}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.result;
 
-  const res = await fetch(`${store.base}/api/checkout/pub/orderForms/simulation?sc=1`, {
+  const body = { items: [{ id: String(skuId), quantity: 1, seller }], postalCode: cep, country: 'BRA' };
+  if (geo) body.geoCoordinates = [geo.lng, geo.lat];
+  const res = await fetchWithRetry(`${store.base}/api/checkout/pub/orderForms/simulation?sc=1`, {
     method: 'POST',
     headers: { 'User-Agent': UA, Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items: [{ id: String(skuId), quantity: 1, seller }], postalCode: cep, country: 'BRA' }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const result = summarizeSimulation(await res.json());
@@ -88,7 +126,7 @@ async function simulateOne(store, skuId, seller, cep) {
 }
 
 // Simula as ofertas relevantes de uma loja. Retorna { [skuId]: resultado }
-export async function checkShipping(store, offers, cep) {
+export async function checkShipping(store, offers, cep, geo = null) {
   const seen = new Set();
   const queue = [];
   for (const o of offers) {
@@ -104,7 +142,7 @@ export async function checkShipping(store, offers, cep) {
     while (next < queue.length) {
       const o = queue[next++];
       try {
-        results[o.skuId] = await simulateOne(store, o.skuId, o.sellerId || '1', cep);
+        results[o.skuId] = await simulateOne(store, o.skuId, o.sellerId || '1', cep, geo);
       } catch (err) {
         results[o.skuId] = { ok: null, error: err.message };
       }
