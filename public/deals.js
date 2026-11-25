@@ -3,6 +3,7 @@
 import { $, api, brl, bus, esc, fmtAgo, fmtCep, getCep, promoHtml, safeUrl, shipHtml, MAX_FREIGHT, pkgLabel, toast } from './common.js';
 import { addToCart } from './cart.js';
 import { openWatchDialog } from './watch.js';
+import { icon } from './icons.js';
 
 const PAGE = 48;
 let storeById = {};
@@ -44,15 +45,15 @@ function dealCard(d) {
   const store = storeById[o.storeId];
   const badge =
     d.realDiscount != null
-      ? `<span class="deal-badge real" title="Comparado ao preço mediano de ${d.storesCount - 1} outras farmácias">${d.realDiscount}% abaixo das outras farmácias</span>`
-      : `<span class="deal-badge list" title="Desconto informado pela própria loja (de/por), sem comparação com outras farmácias">-${d.listDiscount}% no site da loja</span>`;
+      ? `<span class="deal-badge real" title="Comparado ao preço mediano de ${d.storesCount - 1} outras farmácias"><b>-${d.realDiscount}%</b> vs. outras farmácias</span>`
+      : `<span class="deal-badge list" title="Desconto informado pela própria loja (de/por), sem comparação com outras farmácias"><b>-${d.listDiscount}%</b> no site da loja</span>`;
   const ref = d.refPrice != null ? `<div class="deal-ref">outras cobram ~${brl.format(d.refPrice)}</div>` : '';
   const old = o.listPrice > o.price + 0.005 ? `<span class="old">${brl.format(o.listPrice)}</span>` : '';
   const promos = [...(o.promos || []).map(promoHtml), ...(o.highlights || []).map((h) => `<span class="promo">${esc(h)}</span>`)].join(' ');
   const shipLine = shipCep ? `<div class="deal-ship">${shipHtml(ship[shipKey(d)], o.price)}</div>` : '';
   const meta = [d.brand, d.dosage, pkgLabel(d.quantity)].filter(Boolean).map(esc).join(' · ');
   return `<article class="deal" data-key="${esc(d.key)}">
-    <div class="deal-top">${img ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '<span class="ci-ph">🛍️</span>'}${badge}</div>
+    <div class="deal-top">${img ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : `<span class="ci-ph">${icon('bag')}</span>`}${badge}</div>
     <h3 class="deal-name">${esc(d.name)}</h3>
     ${meta ? `<div class="deal-meta">${meta}</div>` : ''}
     <div class="deal-price">${brl.format(o.bestPrice)} ${o.bestPrice < o.price - 0.005 ? '<small>cada, na promoção</small>' : old}</div>
@@ -61,9 +62,9 @@ function dealCard(d) {
     ${promos ? `<div class="deal-promos">${promos}</div>` : ''}
     ${shipLine}
     <div class="deal-actions">
-      ${url ? `<a class="btn-small" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Ver na loja ↗</a>` : ''}
-      <button type="button" class="btn-small ghost" data-cart title="Adicionar ao carrinho">🛒</button>
-      ${d.ean ? '<button type="button" class="btn-small ghost" data-watch title="Monitorar preço">🔔</button>' : ''}
+      ${url ? `<a class="btn-small" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Ver na loja ${icon('external')}</a>` : ''}
+      <button type="button" class="btn-small ghost" data-cart title="Adicionar ao carrinho" aria-label="Adicionar ao carrinho">${icon('cart')}</button>
+      ${d.ean ? `<button type="button" class="btn-small ghost" data-watch title="Monitorar preço" aria-label="Monitorar preço">${icon('bell')}</button>` : ''}
     </div>
   </article>`;
 }

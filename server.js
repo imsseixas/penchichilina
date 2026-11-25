@@ -29,6 +29,7 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
   '.json': 'application/json; charset=utf-8',
 };
 
@@ -241,7 +242,10 @@ async function serveStatic(res, pathname) {
   if (!file.startsWith(PUBLIC_DIR + sep)) return sendJson(res, 403, { error: 'proibido' });
   try {
     const body = await readFile(file);
-    res.writeHead(200, { 'Content-Type': MIME[extname(file)] || 'application/octet-stream', ...SECURITY_HEADERS });
+    const ext = extname(file);
+    // a fonte não muda: o navegador pode guardar por um ano
+    const cache = ext === '.woff2' ? { 'Cache-Control': 'public, max-age=31536000, immutable' } : {};
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', ...cache, ...SECURITY_HEADERS });
     res.end(body);
   } catch {
     sendJson(res, 404, { error: 'não encontrado' });

@@ -1,6 +1,7 @@
 // Carrinho: guarda os produtos no navegador e pede ao servidor o melhor lugar
 // para comprar tudo (uma farmácia só ou dividido em duas), com frete do CEP.
 import { $, api, brl, bus, esc, fmtCep, fmtEta, getCep, openPanel, safeUrl, storage, toast } from './common.js';
+import { icon } from './icons.js';
 
 const KEY = 'pechinchilina:cart';
 const MAX_ITEMS = 15;
@@ -51,7 +52,7 @@ function linesHtml(lines, itemsByKey) {
       const url = safeUrl(l.url);
       const name = `${it?.qty || 1}× ${esc(it?.name || l.key)}`;
       const price = l.available ? brl.format(l.total) : '<span class="no">indisponível</span>';
-      return `<li>${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name} ↗</a>` : name}<span>${price}</span></li>`;
+      return `<li>${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name} ${icon('external')}</a>` : name}<span>${price}</span></li>`;
     })
     .join('')}</ul>`;
 }
@@ -118,7 +119,7 @@ function resultHtml() {
 function render() {
   const el = $('#tab-cart');
   if (!items.length) {
-    el.innerHTML = '<div class="sp-empty"><p><b>Seu carrinho está vazio.</b></p><p class="muted">Use “🛒 Adicionar” nos resultados ou nas Superofertas. Depois calculamos onde sai mais barato comprar tudo, com frete.</p></div>';
+    el.innerHTML = '<div class="sp-empty"><p><b>Seu carrinho está vazio.</b></p><p class="muted">Use “Adicionar” nos resultados ou nas Superofertas. Depois calculamos onde sai mais barato comprar tudo, com frete.</p></div>';
     return;
   }
   const cep = getCep();
@@ -127,7 +128,7 @@ function render() {
       .map((i) => {
         const img = safeUrl(i.image);
         return `<li class="ci" data-key="${esc(i.key)}">
-          ${img ? `<img src="${esc(img)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : '<span class="ci-ph">💊</span>'}
+          ${img ? `<img src="${esc(img)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span class="ci-ph">${icon('pill')}</span>`}
           <span class="ci-name">${esc(i.name)}</span>
           <span class="qty"><button type="button" data-dec aria-label="Diminuir">−</button><span>${i.qty}</span><button type="button" data-inc aria-label="Aumentar">+</button></span>
           <button type="button" class="ci-rm" data-rm aria-label="Remover">×</button>

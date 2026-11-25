@@ -1,6 +1,7 @@
 // Monitorados: produtos que o servidor verifica periodicamente, com alertas
 // de superoferta (alvo atingido, menor preço já visto, queda forte).
 import { $, api, brl, esc, fmtAgo, fmtCep, getCep, openPanel, safeUrl, storage, toast } from './common.js';
+import { icon } from './icons.js';
 
 const SEEN_KEY = 'pechinchilina:alerts-seen';
 const POLL_MS = 2 * 60 * 1000;
@@ -27,8 +28,8 @@ function render() {
   const el = $('#tab-watch');
   const intro = `<p class="muted">Verificamos os produtos monitorados a cada 6 horas em todas as farmácias e avisamos quando o preço atinge seu alvo, bate o menor valor já visto ou cai 10% ou mais.</p>`;
   const phone = config.phoneNotifications
-    ? '<p class="hint">📱 Notificações no celular ativadas (ntfy).</p>'
-    : '<p class="hint">📱 Quer receber no celular? Instale o app <b>ntfy</b>, assine um tópico secreto e inicie o servidor com <code>NTFY_TOPIC=seu-topico</code>.</p>';
+    ? `<p class="hint">${icon('phone')} Notificações no celular ativadas (ntfy).</p>`
+    : `<p class="hint">${icon('phone')} Quer receber no celular? Instale o app <b>ntfy</b>, assine um tópico secreto e inicie o servidor com <code>NTFY_TOPIC=seu-topico</code>.</p>`;
 
   const alertsHtml = alerts.length
     ? `<div class="w-alerts">
@@ -37,7 +38,7 @@ function render() {
           .slice(0, 20)
           .map((a) => {
             const url = safeUrl(a.url);
-            return `<li class="${a.read ? '' : 'unread'}"><span class="w-when">${esc(fmtAgo(a.at))}</span> ${esc(a.message)}${url ? ` <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Ver ↗</a>` : ''}</li>`;
+            return `<li class="${a.read ? '' : 'unread'}"><span class="w-when">${esc(fmtAgo(a.at))}</span> ${esc(a.message)}${url ? ` <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Ver ${icon('external')}</a>` : ''}</li>`;
           })
           .join('')}</ul>
       </div>`
@@ -56,7 +57,7 @@ function render() {
           const low = w.low ? ` · menor visto ${brl.format(w.low.total)}` : '';
           const reached = best && w.target != null && best.total <= w.target ? ' <span class="good">✓ alvo atingido</span>' : '';
           return `<li class="w-item" data-id="${esc(w.id)}">
-            ${img ? `<img src="${esc(img)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : '<span class="ci-ph">💊</span>'}
+            ${img ? `<img src="${esc(img)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span class="ci-ph">${icon('pill')}</span>`}
             <div>
               <div class="ci-name">${esc(w.name)}</div>
               <div class="w-meta">${w.target != null ? `Alvo: ${brl.format(w.target)}` : 'Sem alvo'}${w.cep ? ` · CEP ${esc(fmtCep(w.cep))}` : ''}${reached}</div>
@@ -68,7 +69,7 @@ function render() {
         })
         .join('')}</ul>
       <button type="button" class="btn-secondary block" id="watch-check"${checking ? ' disabled' : ''}>${checking ? 'Verificando…' : 'Verificar agora'}</button>`
-    : '<div class="sp-empty"><p><b>Nenhum produto monitorado.</b></p><p class="muted">Use “🔔 Monitorar” num produto da busca ou das Superofertas.</p></div>';
+    : '<div class="sp-empty"><p><b>Nenhum produto monitorado.</b></p><p class="muted">Use “Monitorar” num produto da busca ou das Superofertas.</p></div>';
 
   el.innerHTML = alertsHtml + list + intro + phone;
 }

@@ -2,6 +2,7 @@
 // A localização é arredondada (~100 m), fica só neste navegador e vai para as
 // farmácias apenas para achar as lojas físicas próximas.
 import { esc, fmtEta, storage } from './common.js';
+import { icon } from './icons.js';
 
 const KEY = 'pechinchilina:near';
 const round = (v) => Math.round(v * 1000) / 1000;
@@ -92,9 +93,9 @@ export function pointHtml(point, hours, { extra = 0 } = {}) {
   const map = mapsUrl(point);
   const status = st.text ? `<span class="${st.open ? 'free' : 'closed'}">${esc(st.text)}</span> · ` : '';
   return `<span class="ship store-pt">
-    <span class="pt-name">🏪 ${esc(point.name)}</span>
+    <span class="pt-name">${icon('store')} ${esc(point.name)}</span>
     <span class="sub"><b>${esc(fmtKm(point.distanceKm))}</b>${point.address ? ` · ${esc(point.address)}` : ''}</span>
-    <span class="sub">${status}retire em ${esc(fmtEta(point.estimate) || '—')} comprando no site${map ? ` · <a href="${esc(map)}" target="_blank" rel="noopener noreferrer">mapa ↗</a>` : ''}</span>
+    <span class="sub">${status}retire em ${esc(fmtEta(point.estimate) || '—')} comprando no site${map ? ` · <a href="${esc(map)}" target="_blank" rel="noopener noreferrer">mapa ${icon('external')}</a>` : ''}</span>
     ${extra > 0 ? `<span class="sub muted">+ ${extra} ${extra === 1 ? 'outra loja' : 'outras lojas'} com estoque perto</span>` : ''}
   </span>`;
 }

@@ -71,7 +71,8 @@ src/cart.js        otimizador de carrinho (uma loja x duas lojas)
 src/watch.js       monitoramento periódico e alertas
 src/catalog.js     busca por código de barras (EAN) com cache
 src/history.js     histórico de preços por EAN
-public/            interface (HTML/CSS/JS puro); near.js = localização e horários
+public/            interface (HTML/CSS/JS puro); near.js = localização e horários,
+                   icons.js = ícones SVG (Lucide), fonts/ = Plus Jakarta Sans (OFL)
 test/              testes (node --test)
 ```
 

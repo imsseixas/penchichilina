@@ -7,6 +7,7 @@ import { loadNear, saveNear, requestLocation, openState, fmtKm, pointHtml } from
 import { addToCart, initCart } from './cart.js';
 import { initWatch, openWatchDialog } from './watch.js';
 import { initDeals, showDeals } from './deals.js';
+import { icon, hydrateIcons } from './icons.js';
 
 const PAGE = 30;
 const OFFERS_VISIBLE = 4;
@@ -310,7 +311,7 @@ function syncShipControls() {
     : 'Com CEP, o ranking compara <strong>preço + frete</strong> (frete de 1 unidade).';
   const btn = $('#near-btn');
   btn.setAttribute('aria-pressed', String(state.nearOn));
-  btn.querySelector('span').textContent = state.nearOn ? (state.geo ? 'Perto de mim ✓' : 'Perto do CEP ✓') : 'Perto de mim';
+  btn.querySelector('span').textContent = state.nearOn && !state.geo ? 'Perto do CEP' : 'Perto de mim';
 }
 
 function shipHtml(o) {
@@ -363,12 +364,12 @@ function offerRow(o, g, i) {
   const unit = g.quantity ? fmtUnit(o.price / g.quantity.qty, g.quantity.unit) : '';
   const isBest = i === 0 && g.offers.length > 1 && !g.noDelivery;
   return `<tr class="${isBest ? 'best' : ''}">
-    <td class="c-store"><span class="store"><i style="background:${esc(store?.color || '#999')}"></i><span>${esc(o.storeName)}${o.sellerName ? `<span class="seller">vendido por ${esc(o.sellerName)}</span>` : ''}</span></span></td>
+    <td class="c-store"><span class="store"><i style="background:${esc(store?.color || '#999')}"></i><span>${esc(o.storeName)}${isBest ? '<span class="best-badge">Melhor preço</span>' : ''}${o.sellerName ? `<span class="seller">vendido por ${esc(o.sellerName)}</span>` : ''}</span></span></td>
     <td class="c-price"><span class="price">${brl.format(o.price)}</span>${old || off ? `<span class="was">${old}${off}</span>` : ''}</td>
     <td class="c-promo">${promos}</td>
     ${state.cep ? `<td class="c-ship">${shipHtml(o)}</td>` : ''}
     <td class="c-unit num">${unit}</td>
-    <td class="c-link">${url ? `<a class="go" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Ver na loja ↗</a>` : ''}</td>
+    <td class="c-link">${url ? `<a class="go" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Ver na loja ${icon('external')}</a>` : ''}</td>
   </tr>`;
 }
 
@@ -378,7 +379,7 @@ function freightLine(g) {
     if (g.freight == null) return '<div class="freight">vendo estoque nas lojas…</div>';
     if (g.freight === Infinity) return '<div class="freight">sem estoque em loja perto</div>';
     const p = nearPoint(g.best);
-    return `<div class="freight">🏪 ${esc(p.name)} · <b>${esc(fmtKm(p.distanceKm))}</b></div>`;
+    return `<div class="freight">${icon('store')} ${esc(p.name)} · <b>${esc(fmtKm(p.distanceKm))}</b></div>`;
   }
   if (g.freight == null) return '<div class="freight">verificando frete…</div>';
   if (g.freight === Infinity) return '<div class="freight">nenhuma farmácia atende seu CEP</div>';
@@ -398,7 +399,7 @@ function groupHtml(g) {
   const img = safeUrl(g.image);
   const imgHtml = img
     ? `<img class="g-img" src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
-    : '<div class="g-img ph">💊</div>';
+    : `<div class="g-img ph">${icon('pill')}</div>`;
 
   const best = g.best;
   const viaPromo = g.min < best.price - 0.005;
@@ -412,8 +413,8 @@ function groupHtml(g) {
   const visible = expanded ? g.offers : g.offers.slice(0, OFFERS_VISIBLE);
   const hiddenCount = g.offers.length - visible.length;
   const actions = `<div class="g-actions">
-      <button type="button" class="btn-small" data-cart="${esc(g.key)}">🛒 Adicionar</button>
-      ${g.ean ? `<button type="button" class="btn-small ghost" data-watch="${esc(g.key)}">🔔 Monitorar</button>` : ''}
+      <button type="button" class="btn-small" data-cart="${esc(g.key)}">${icon('cart')} Adicionar</button>
+      ${g.ean ? `<button type="button" class="btn-small ghost" data-watch="${esc(g.key)}">${icon('bell')} Monitorar</button>` : ''}
     </div>`;
 
   return `<article class="group" id="g-${esc(g.key)}">
@@ -458,21 +459,21 @@ function renderHighlights(groups) {
     if (opts.length) {
       const open = opts.filter((x) => openState(state.nearbyHours.get(x.p.id)).open !== false);
       const first = pickMin(open.length ? open : opts, (x) => x.g.total);
-      cards.push({ k: open.length ? 'Vá primeiro (aberta agora)' : 'Vá primeiro', v: brl.format(first.g.total), d: `${first.p.name} · ${fmtKm(first.p.distanceKm)} · ${first.g.name}`, key: first.g.key });
+      cards.push({ ic: 'go', k: open.length ? 'Vá primeiro (aberta agora)' : 'Vá primeiro', v: brl.format(first.g.total), d: `${first.p.name} · ${fmtKm(first.p.distanceKm)} · ${first.g.name}`, key: first.g.key });
       const all = usable.flatMap((g) => g.offers.map((o) => ({ g, o, p: nearPoint(o) }))).filter((x) => x.p);
       const closest = pickMin(all, (x) => x.p.distanceKm);
       if (closest.p.id !== first.p.id)
-        cards.push({ k: 'Loja mais perto com o produto', v: fmtKm(closest.p.distanceKm), d: `${closest.p.name} · ${closest.g.name} por ${brl.format(costOf(closest.o))}`, key: closest.g.key });
+        cards.push({ ic: 'store', k: 'Loja mais perto com o produto', v: fmtKm(closest.p.distanceKm), d: `${closest.p.name} · ${closest.g.name} por ${brl.format(costOf(closest.o))}`, key: closest.g.key });
     }
   } else {
     const cheapest = pickMin(usable, (g) => g.total);
-    cards.push({ k: `Menor preço${withFreight}`, v: brl.format(cheapest.total), d: `${cheapest.name} · ${cheapest.best.storeName}`, key: cheapest.key });
+    cards.push({ ic: 'tag', k: `Menor preço${withFreight}`, v: brl.format(cheapest.total), d: `${cheapest.name} · ${cheapest.best.storeName}`, key: cheapest.key });
   }
 
   const withUnit = usable.filter((g) => g.unit != null);
   if (withUnit.length) {
     const u = pickMin(withUnit, (g) => g.unit);
-    cards.push({ k: `Menor preço por unidade${withFreight}`, v: fmtUnit(u.unit, u.quantity.unit), d: `${u.name} · ${u.best.storeName}`, key: u.key });
+    cards.push({ ic: 'pill', k: `Menor preço por unidade${withFreight}`, v: fmtUnit(u.unit, u.quantity.unit), d: `${u.name} · ${u.best.storeName}`, key: u.key });
   }
 
   const multi = usable.filter((g) => g.offers.length > 1);
@@ -480,11 +481,11 @@ function renderHighlights(groups) {
     const s = pickMin(multi, (g) => -g.savings);
     const worst = s.offers.filter((o) => freightOf(o) !== Infinity).at(-1);
     if (s.savings >= 0.5 && worst)
-      cards.push({ k: 'Maior diferença entre lojas', v: brl.format(s.savings), d: `${s.name} · ${s.best.storeName} vs ${worst.storeName}`, key: s.key });
+      cards.push({ ic: 'swap', k: 'Maior diferença entre lojas', v: brl.format(s.savings), d: `${s.name} · ${s.best.storeName} vs ${worst.storeName}`, key: s.key });
   }
 
   $('#highlights').innerHTML = cards
-    .map((c) => `<button type="button" class="hl" data-jump="${esc(c.key)}"><div class="k">${esc(c.k)}</div><div class="v">${esc(c.v)}</div><div class="d">${esc(c.d)}</div></button>`)
+    .map((c) => `<button type="button" class="hl" data-jump="${esc(c.key)}"><div class="k">${icon(c.ic)}${esc(c.k)}</div><div class="v">${esc(c.v)}</div><div class="d">${esc(c.d)}</div></button>`)
     .join('');
 }
 
@@ -569,14 +570,14 @@ function renderNearInfo() {
     ? ` <button type="button" class="link-btn" data-radius="${wider[0]}">ampliar para ${wider[0]} km</button>`
     : '';
   if (!near.length) {
-    el.innerHTML = `📍 <b>Nenhuma farmácia com loja física a até ${state.radius} km ${esc(where)}.</b>${widen}
+    el.innerHTML = `${icon('pin')} <b>Nenhuma farmácia com loja física a até ${state.radius} km ${esc(where)}.</b>${widen}
       <span class="muted">Hoje só Drogaria São Paulo, Pacheco, Pague Menos e Extrafarma informam onde ficam suas lojas.</span>`;
     return;
   }
   const list = near
     .map((s) => `<b>${esc(s.storeName)}</b> (${s.count} ${s.count === 1 ? 'loja' : 'lojas'}, a mais perto a ${esc(fmtKm(s.points[0].distanceKm))})`)
     .join(' · ');
-  el.innerHTML = `📍 Buscando só nas farmácias com loja a até ${state.radius} km ${esc(where)}: ${list}.${widen}
+  el.innerHTML = `${icon('pin')} Buscando só nas farmácias com loja a até ${state.radius} km ${esc(where)}: ${list}.${widen}
     <span class="muted">As outras não têm loja na região ou não informam onde ficam.</span>`;
 }
 
@@ -588,7 +589,7 @@ async function search(query, { fresh = false } = {}) {
   const store = storeMode();
   const geo = store ? state.geo : null;
   if (store && !cep && !geo) {
-    toast('Informe o CEP ou toque em 📍 Perto de mim.');
+    toast('Informe o CEP ou toque em "Perto de mim".');
     setNear(false);
   }
   showView('search');
@@ -613,7 +614,7 @@ async function search(query, { fresh = false } = {}) {
   let storeIds = null;
   if (storeMode()) {
     $('#near-info').hidden = false;
-    $('#near-info').textContent = '📍 Procurando farmácias perto de você…';
+    $('#near-info').innerHTML = `${icon('pin')} Procurando farmácias perto de você…`;
     $('#status').hidden = true;
     try {
       const nb = await loadNearby(cep, geo);
@@ -771,6 +772,7 @@ async function toggleNear() {
 // ---------- abas ----------
 function showView(view) {
   const deals = view === 'deals';
+  document.body.dataset.view = view;
   $('#view-search').hidden = deals;
   $('#view-deals').hidden = !deals;
   document.querySelectorAll('[data-view]').forEach((a) => a.setAttribute('aria-current', String(a.dataset.view === view)));
@@ -951,6 +953,7 @@ function bind() {
 }
 
 async function init() {
+  hydrateIcons();
   bind();
   initPanel();
   renderRecent();

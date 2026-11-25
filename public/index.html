@@ -5,63 +5,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pechinchilina</title>
   <meta name="description" content="Compare preços e promoções de remédios em várias farmácias online.">
+  <meta name="theme-color" content="#0b7a5b">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="features.css">
 </head>
-<body>
+<body data-view="deals">
   <header class="top">
     <div class="wrap top-inner">
       <a class="logo" href="/" aria-label="Pechinchilina — início">
-        <img src="favicon.svg" alt="" width="32" height="32">
-        <span>Pechinchilina</span>
+        <img src="favicon.svg" alt="" width="34" height="34">
+        <span>Pechin<b>chilina</b></span>
       </a>
       <nav class="nav" aria-label="Seções">
-        <a href="/" data-view="deals" aria-current="true">🔥 Superofertas</a>
-        <a href="#busca" data-view="search" aria-current="false">Buscar</a>
+        <a href="/" data-view="deals" aria-current="true"><i data-icon="flame"></i><span>Superofertas</span></a>
+        <a href="#busca" data-view="search" aria-current="false"><i data-icon="search"></i><span>Buscar</span></a>
       </nav>
       <div class="top-actions">
-        <button type="button" class="icon-btn" data-open="watch" title="Monitorados e alertas">🔔<span class="badge alert-badge" hidden></span></button>
-        <button type="button" class="icon-btn" data-open="cart" title="Carrinho">🛒<span class="badge cart-badge" hidden></span></button>
+        <button type="button" class="icon-btn" data-open="watch" title="Monitorados e alertas" aria-label="Monitorados e alertas"><i data-icon="bell"></i><span class="badge alert-badge" hidden></span></button>
+        <button type="button" class="icon-btn" data-open="cart" title="Carrinho" aria-label="Carrinho"><i data-icon="cart"></i><span class="badge cart-badge" hidden></span></button>
       </div>
     </div>
   </header>
 
   <div class="page">
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <p class="eyebrow"><i data-icon="sparkles"></i> 11 farmácias comparadas em segundos</p>
+        <h1>O seu remédio pelo <em>menor preço</em>, com frete e promoção na conta</h1>
+      </div>
+
+      <form id="search-form" class="search" role="search" autocomplete="off">
+        <div class="sf-field sf-q">
+          <i data-icon="search"></i>
+          <label for="q" class="sr-only">Nome do remédio</label>
+          <input id="q" name="q" type="search" list="suggestions" placeholder="Qual remédio? Ex.: losartana 50mg, dorflex…" minlength="2" maxlength="100" required autofocus>
+          <datalist id="suggestions"></datalist>
+        </div>
+        <div class="sf-field sf-cep">
+          <i data-icon="truck"></i>
+          <label for="cep" class="sr-only">CEP para entrega</label>
+          <input id="cep" name="cep" class="cep" type="text" inputmode="numeric" placeholder="Seu CEP" maxlength="9" title="Informe o CEP para ver quem entrega, o frete e o prazo">
+        </div>
+        <button type="button" id="near-btn" class="near-btn" aria-pressed="false" title="Buscar só nas farmácias com loja física perto de você (usa sua localização)"><i data-icon="pin"></i><span>Perto de mim</span></button>
+        <button type="submit" class="btn-primary sf-go"><i data-icon="search"></i><span>Buscar</span></button>
+      </form>
+      <div id="recent" class="recent" hidden></div>
+    </div>
+  </section>
+
   <main class="wrap">
-    <form id="search-form" class="search" role="search" autocomplete="off">
-      <label for="q" class="sr-only">Nome do remédio</label>
-      <input id="q" name="q" type="search" list="suggestions" placeholder="Ex.: losartana 50mg, dorflex, rivotril 2mg…" minlength="2" maxlength="100" required autofocus>
-      <datalist id="suggestions"></datalist>
-      <label for="cep" class="sr-only">CEP para entrega</label>
-      <input id="cep" name="cep" class="cep" type="text" inputmode="numeric" placeholder="Seu CEP" maxlength="9" title="Informe o CEP para ver quem entrega, o frete e o prazo">
-      <button type="button" id="near-btn" class="near-btn" aria-pressed="false" title="Buscar só nas farmácias com loja física perto de você (usa sua localização)">📍 <span>Perto de mim</span></button>
-      <button type="submit" class="btn-primary">Buscar</button>
-    </form>
-
     <section id="view-search" hidden>
-    <div id="recent" class="recent" hidden></div>
-
     <div id="near-info" class="near-info" aria-live="polite" hidden></div>
 
     <section id="status" class="status" aria-live="polite" hidden></section>
 
     <div id="empty-state" class="empty-state">
       <h2>Como funciona</h2>
-      <ol>
-        <li>Digite o nome do remédio (de preferência com a dosagem, ex.: <em>losartana 50mg</em>) e seu CEP.</li>
-        <li>Consultamos as farmácias em paralelo e verificamos quem entrega no seu endereço, com frete e prazo.</li>
-        <li>O mesmo produto (mesmo código de barras) é agrupado, então você compara preço + frete entre lojas.</li>
-        <li>Adicione ao <b>🛒 carrinho</b> para descobrir onde comprar tudo junto, ou <b>🔔 monitore</b> para ser avisado quando baixar.</li>
+      <ol class="steps">
+        <li><span class="step-ic"><i data-icon="search"></i></span><b>Busque o remédio</b><span>De preferência com a dosagem, ex.: <em>losartana 50mg</em>. Informe o CEP para ver o frete.</span></li>
+        <li><span class="step-ic"><i data-icon="truck"></i></span><b>Veja quem entrega</b><span>Consultamos as farmácias em paralelo, com frete e prazo para o seu endereço.</span></li>
+        <li><span class="step-ic"><i data-icon="layers"></i></span><b>Compare lado a lado</b><span>O mesmo produto (mesmo código de barras) fica agrupado, com preço + frete de cada loja.</span></li>
+        <li><span class="step-ic"><i data-icon="cart"></i></span><b>Monte o carrinho</b><span>Descubra onde comprar tudo junto, ou monitore e seja avisado quando baixar.</span></li>
       </ol>
-      <p>Procurando pechincha sem saber o quê? Veja as <a href="/" data-view="deals">🔥 Superofertas</a>.</p>
-      <p class="muted">Confira sempre na loja antes de comprar — e siga a orientação do seu médico ou farmacêutico.</p>
+      <p class="muted">Procurando pechincha sem saber o quê? Veja as <a href="/" data-view="deals">Superofertas</a>. Confira sempre na loja antes de comprar e siga a orientação do seu médico ou farmacêutico.</p>
     </div>
 
     <div id="results-area" class="results-area" hidden>
       <aside class="filters" aria-label="Filtros">
         <details id="filters-details" open>
-          <summary>Filtros e ordenação</summary>
+          <summary><i data-icon="sliders"></i> Filtros e ordenação</summary>
 
           <label class="field">
             <span>Ordenar por</span>
@@ -124,20 +139,21 @@
             <select id="package"><option value="">Todas</option></select>
           </label>
 
-          <label class="check">
-            <input type="checkbox" id="promo-only">
-            <span>Só produtos em promoção</span>
-          </label>
-
-          <label class="check">
-            <input type="checkbox" id="multi-store">
-            <span>Só produtos em 2+ farmácias</span>
-          </label>
-
-          <label class="check">
-            <input type="checkbox" id="show-loose">
-            <span>Incluir resultados menos exatos</span>
-          </label>
+          <fieldset class="field">
+            <legend>Mostrar</legend>
+            <label class="check">
+              <input type="checkbox" id="promo-only">
+              <span>Só produtos em promoção</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="multi-store">
+              <span>Só produtos em 2+ farmácias</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="show-loose">
+              <span>Incluir resultados menos exatos</span>
+            </label>
+          </fieldset>
 
           <fieldset class="field">
             <legend>Farmácias</legend>
@@ -157,17 +173,20 @@
 
     <section id="view-deals">
       <div class="deals-head">
-        <div>
-          <h1>🔥 Superofertas</h1>
-          <p class="muted">Produtos com preço bem abaixo do que as outras farmácias cobram pelo <b>mesmo item</b>. <span id="deals-status"></span></p>
+        <div class="deals-title">
+          <span class="title-ic"><i data-icon="flame"></i></span>
+          <div>
+            <h2>Superofertas</h2>
+            <p class="muted">Bem abaixo do que as outras farmácias cobram pelo <b>mesmo item</b>. <span id="deals-status"></span></p>
+          </div>
         </div>
         <div class="deals-controls">
+          <label class="check toggle"><input type="checkbox" id="deals-real"><span>Só comparadas entre farmácias</span></label>
           <select id="deals-sort" aria-label="Ordenar ofertas">
             <option value="score">Melhores ofertas</option>
             <option value="discount">Maior desconto</option>
             <option value="price">Menor preço</option>
           </select>
-          <label class="check"><input type="checkbox" id="deals-real"><span>Só comparadas entre farmácias</span></label>
         </div>
       </div>
       <div id="deal-cats" class="chips deal-cats"></div>
@@ -177,16 +196,19 @@
     </section>
   </main>
 
-  <footer class="wrap foot">
-    <p>Pechinchilina consulta as APIs públicas das lojas em tempo real. Preços, estoque e frete podem mudar; confira na loja.</p>
+  <footer class="foot">
+    <div class="wrap foot-inner">
+      <span class="foot-brand"><img src="favicon.svg" alt="" width="22" height="22"> Pechinchilina</span>
+      <p>Consultamos as APIs públicas das farmácias em tempo real. Preços, estoque e frete podem mudar: confira na loja antes de comprar.</p>
+    </div>
   </footer>
   </div>
 
   <aside id="side-panel" class="side-panel" aria-label="Carrinho e monitorados" aria-hidden="true">
     <div class="sp-head" role="tablist">
-      <button type="button" role="tab" data-tab="cart" aria-selected="true">🛒 Carrinho <span class="badge cart-badge" hidden></span></button>
-      <button type="button" role="tab" data-tab="watch" aria-selected="false">🔔 Monitorados <span class="badge alert-badge" hidden></span></button>
-      <button type="button" class="sp-close" aria-label="Fechar painel">×</button>
+      <button type="button" role="tab" data-tab="cart" aria-selected="true"><i data-icon="cart"></i> Carrinho <span class="badge cart-badge" hidden></span></button>
+      <button type="button" role="tab" data-tab="watch" aria-selected="false"><i data-icon="bell"></i> Monitorados <span class="badge alert-badge" hidden></span></button>
+      <button type="button" class="sp-close" aria-label="Fechar painel"><i data-icon="x"></i></button>
     </div>
     <div id="tab-cart" class="sp-body" role="tabpanel"></div>
     <div id="tab-watch" class="sp-body" role="tabpanel" hidden></div>
@@ -194,7 +216,7 @@
 
   <dialog id="watch-dialog" aria-labelledby="wd-title">
     <form id="watch-form" method="dialog">
-      <h2 id="wd-title">🔔 Monitorar preço</h2>
+      <h2 id="wd-title"><span class="title-ic sm"><i data-icon="bell"></i></span> Monitorar preço</h2>
       <p id="wd-name" class="wd-name"></p>
       <p id="wd-now" class="muted"></p>
       <label class="field">
