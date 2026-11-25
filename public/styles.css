@@ -137,8 +137,8 @@ button, input, select { font: inherit; }
 .hero h1 { margin: 0; font-size: clamp(26px, 3.6vw, 40px); line-height: 1.12; font-weight: 800; letter-spacing: -0.02em; word-spacing: 0.08em; text-wrap: balance; }
 .hero h1 em { font-style: normal; color: var(--accent); }
 /* na tela de busca o destaque encolhe para só a barra */
-body[data-view='search'] .hero { padding: 20px 0; }
-body[data-view='search'] .hero-copy { display: none; }
+body[data-page='search'] .hero { padding: 20px 0; }
+body[data-page='search'] .hero-copy { display: none; }
 
 .search {
   display: flex; gap: 8px; padding: 8px;

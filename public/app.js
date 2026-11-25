@@ -772,10 +772,10 @@ async function toggleNear() {
 // ---------- abas ----------
 function showView(view) {
   const deals = view === 'deals';
-  document.body.dataset.view = view;
+  document.body.dataset.page = view;
   $('#view-search').hidden = deals;
   $('#view-deals').hidden = !deals;
-  document.querySelectorAll('[data-view]').forEach((a) => a.setAttribute('aria-current', String(a.dataset.view === view)));
+  document.querySelectorAll('a[data-view]').forEach((a) => a.setAttribute('aria-current', String(a.dataset.view === view)));
   if (deals) {
     // Superofertas é a página inicial
     history.replaceState(null, '', location.pathname);
@@ -816,7 +816,7 @@ function bind() {
       search(q);
     }
   });
-  document.querySelectorAll('[data-view]').forEach((a) =>
+  document.querySelectorAll('a[data-view]').forEach((a) =>
     a.addEventListener('click', (e) => {
       e.preventDefault();
       showView(a.dataset.view);
