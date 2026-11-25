@@ -6,7 +6,8 @@ import { STORES, STORE_BY_ID } from './src/stores.js';
 import { searchStore } from './src/vtex.js';
 import { record, summarize } from './src/history.js';
 import { checkShipping, cleanCep, simulateOne } from './src/shipping.js';
-import { getDeals, refreshDeals, startDeals } from './src/deals.js';
+import { ensureDeals, getDeals, refreshDeals, startDeals } from './src/deals.js';
+import { SERVERLESS } from './src/jsonfile.js';
 import { optimizeCart, MAX_CART_ITEMS } from './src/cart.js';
 import { addWatch, checkAll, isChecking, listAlerts, listWatches, markAlertsRead, removeWatch, startWatch } from './src/watch.js';
 import { mapLimit } from './src/catalog.js';
@@ -45,15 +46,24 @@ class HttpError extends Error {
   }
 }
 
-function sendJson(res, status, body) {
-  res.writeHead(status, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store', ...SECURITY_HEADERS });
+function sendJson(res, status, body, cacheControl = 'no-store') {
+  res.writeHead(status, { 'Content-Type': MIME['.json'], 'Cache-Control': cacheControl, ...SECURITY_HEADERS });
   res.end(JSON.stringify(body));
 }
 
-// Rotas que alteram dados: só JSON e só a partir da própria página do app.
+const sameHost = (origin, host) => {
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+};
+
+// Rotas que alteram dados: só JSON e só a partir da própria página do app
+// (http no computador, https na Vercel).
 async function readBody(req) {
   const origin = req.headers.origin;
-  if (origin && origin !== `http://${req.headers.host}`) throw new HttpError(403, 'origem não permitida');
+  if (origin && !sameHost(origin, req.headers.host)) throw new HttpError(403, 'origem não permitida');
   if (!String(req.headers['content-type'] || '').startsWith('application/json')) {
     throw new HttpError(415, 'envie JSON');
   }
@@ -249,6 +259,7 @@ const server = createServer(async (req, res) => {
       if (p === '/api/cart/optimize') return await handleCart(req, res);
       if (p === '/api/deals/refresh') {
         await readBody(req);
+        if (SERVERLESS) return sendJson(res, 200, { ok: false });
         refreshDeals();
         return sendJson(res, 202, { ok: true });
       }
@@ -267,6 +278,13 @@ const server = createServer(async (req, res) => {
       case '/api/suggest':
         return await handleSuggest(res, url);
       case '/api/deals':
+        if (SERVERLESS) {
+          // Na Vercel não há servidor ligado para varrer em segundo plano: a varredura
+          // roda dentro da requisição e a CDN guarda a resposta por 6 h. Depois disso
+          // ela entrega a versão antiga na hora e refaz a varredura por trás.
+          const data = await ensureDeals();
+          return sendJson(res, 200, data, data.deals.length ? 'public, s-maxage=21600, stale-while-revalidate=86400' : 'no-store');
+        }
         return sendJson(res, 200, getDeals());
       case '/api/config':
         return sendJson(res, 200, { phoneNotifications: Boolean(process.env.NTFY_TOPIC) });

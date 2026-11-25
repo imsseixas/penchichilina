@@ -25,6 +25,14 @@ Variáveis opcionais:
 
 Dados ficam em `data/` (histórico, superofertas, monitorados e alertas).
 
+### Na Vercel
+
+A Vercel não mantém um servidor ligado: cada requisição acorda uma instância, que pode ser desligada logo depois, e só `/tmp` aceita escrita (e é apagado quando a instância some). Por isso, lá:
+
+- **Superofertas**: a varredura roda dentro da requisição de `/api/deals` (cerca de 30 s na primeira vez) e a CDN da Vercel guarda a resposta por 6 h. Passado esse prazo, entrega a versão anterior na hora e refaz a varredura por trás. O botão "atualizar agora" some. A cada novo deploy o cache zera e o primeiro visitante espera a varredura.
+- **Histórico de preços e 🔔 Monitorados** ficam em `/tmp`: funcionam, mas se perdem quando a instância é recriada, e a verificação a cada 6 h não roda. Para valer de verdade, precisam de um banco (ex.: Upstash Redis ou Vercel Blob) e de um Cron Job.
+- A função precisa poder rodar por até ~1 min (o padrão atual da Vercel, com Fluid compute, é 300 s).
+
 ## O que ele faz
 
 - **Busca em paralelo em 11 farmácias** e mostra os resultados conforme cada uma responde (streaming).

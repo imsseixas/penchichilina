@@ -71,13 +71,14 @@ function dealCard(d) {
 function render() {
   const head = $('#deals-status');
   if (!data) {
-    head.textContent = 'Carregando…';
+    head.textContent = 'Procurando ofertas nas farmácias… pode levar até 1 minuto.';
     return;
   }
   const scanning = data.scanning;
   let status = data.updatedAt ? `Atualizado ${fmtAgo(data.updatedAt)}` : 'Ainda não há ofertas coletadas';
   if (scanning) status += ` · procurando ofertas nas farmácias (${Math.round((scanning.done / scanning.total) * 100)}%)…`;
-  head.innerHTML = `${esc(status)}${scanning ? '' : ' · <button type="button" class="link-btn" id="deals-refresh">atualizar agora</button>'}`;
+  const refresh = !scanning && data.canRefresh !== false;
+  head.innerHTML = `${esc(status)}${refresh ? ' · <button type="button" class="link-btn" id="deals-refresh">atualizar agora</button>' : ''}`;
 
   $('#deal-cats').innerHTML = [{ id: '', name: 'Todas', count: data.deals.length }, ...data.categories]
     .map((c) => `<button type="button" class="chip" data-cat="${esc(c.id)}" aria-pressed="${filters.category === c.id}">${esc(c.name)} <span class="muted">${c.count}</span></button>`)

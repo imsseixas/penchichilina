@@ -1,9 +1,16 @@
 // Persistência simples em arquivos JSON dentro de data/, com escrita atômica.
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
+// Na Vercel (serverless) não há processo ligado o tempo todo e a pasta do projeto
+// é somente leitura: só /tmp aceita escrita, e ele some quando a instância é recriada.
+export const SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+export const DATA_DIR =
+  process.env.DATA_DIR ||
+  (SERVERLESS ? join(tmpdir(), 'pechinchilina') : join(dirname(fileURLToPath(import.meta.url)), '..', 'data'));
 
 export async function readJson(name, fallback) {
   try {

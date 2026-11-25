@@ -7,7 +7,7 @@ import { STORES, STORE_BY_ID } from './stores.js';
 import { searchStore } from './vtex.js';
 import { record } from './history.js';
 import { mapLimit, median } from './catalog.js';
-import { readJson, writeJson } from './jsonfile.js';
+import { readJson, SERVERLESS, writeJson } from './jsonfile.js';
 
 export const DEAL_CATEGORIES = [
   {
@@ -77,8 +77,19 @@ export function scoreDeals(entries) {
 }
 
 // ---------- varredura ----------
-async function scan() {
-  if (scanning) return;
+// Uma varredura por vez; quem chegar durante ela espera a mesma.
+let scanPromise = null;
+function scan() {
+  if (!scanPromise) {
+    scanPromise = doScan().finally(() => {
+      scanning = null;
+      scanPromise = null;
+    });
+  }
+  return scanPromise;
+}
+
+async function doScan() {
   const tasks = [];
   for (const store of STORES) for (const cat of DEAL_CATEGORIES) for (const term of cat.terms) tasks.push({ store, cat, term });
   scanning = { done: 0, total: tasks.length, startedAt: new Date().toISOString() };
@@ -101,21 +112,35 @@ async function scan() {
     ),
   );
 
-  snapshot = { updatedAt: new Date().toISOString(), deals: scoreDeals(entries) };
+  const deals = scoreDeals(entries);
   scanning = null;
+  // varredura que falhou inteira (farmácias fora do ar ou bloqueando) não apaga as ofertas anteriores
+  if (!deals.length && snapshot?.deals?.length) {
+    console.error('Varredura de ofertas não trouxe nada; mantendo as anteriores');
+    return;
+  }
+  snapshot = { updatedAt: new Date().toISOString(), deals };
   await writeJson(FILE, snapshot).catch((err) => console.error('Falha ao salvar ofertas:', err.message));
   console.log(`Superofertas atualizadas: ${snapshot.deals.length} ofertas`);
 }
 
 export function refreshDeals() {
-  if (!scanning) scan().catch((err) => {
-    scanning = null;
-    console.error('Falha na varredura de ofertas:', err);
-  });
+  scan().catch((err) => console.error('Falha na varredura de ofertas:', err));
+}
+
+const isFresh = () =>
+  Boolean(snapshot?.deals?.length) && Date.now() - Date.parse(snapshot.updatedAt) < REFRESH_MS;
+
+// Serverless: garante ofertas frescas esperando a varredura dentro da requisição.
+export async function ensureDeals() {
+  if (!snapshot) snapshot = await readJson(FILE, null);
+  if (!isFresh()) await scan().catch((err) => console.error('Falha na varredura de ofertas:', err));
+  return getDeals();
 }
 
 export async function startDeals() {
   snapshot = await readJson(FILE, null);
+  if (SERVERLESS) return; // sem processo contínuo: a varredura acontece em ensureDeals()
   const age = snapshot ? Date.now() - Date.parse(snapshot.updatedAt) : Infinity;
   // a lista de farmácias mudou desde a última varredura: refaz (a mediana muda)
   const staleStores = snapshot?.deals?.some((d) => [d.best, ...(d.others || [])].some((o) => !STORE_BY_ID[o.storeId]));
@@ -131,6 +156,7 @@ export function getDeals() {
   return {
     updatedAt: snapshot?.updatedAt || null,
     scanning: scanning ? { done: scanning.done, total: scanning.total } : null,
+    canRefresh: !SERVERLESS,
     categories: DEAL_CATEGORIES.map((c) => ({ id: c.id, name: c.name, count: deals.filter((d) => d.category === c.id).length })),
     deals,
   };
